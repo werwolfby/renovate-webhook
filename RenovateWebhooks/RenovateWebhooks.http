@@ -1,0 +1,4 @@
+@RenovateWebhooks_HostAddress = http://localhost:5249
+
+POST {{RenovateWebhooks_HostAddress}}/trigger
+Accept: application/json
