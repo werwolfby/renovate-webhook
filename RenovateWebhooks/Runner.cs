@@ -102,10 +102,12 @@ public class Runner(IOptions<RunnerOptions> runnerOptions, ILogger<Runner> logge
 
         using var process = new Process();
         process.StartInfo = processStartInfo;
-        process.OutputDataReceived += (sender, args) => {
+        process.OutputDataReceived += (_, args) => {
+            if (args.Data is null) return;
             logger.LogInformation("Exec Output: {Data}", args.Data);
         };
-        process.ErrorDataReceived += (sender, args) => {
+        process.ErrorDataReceived += (_, args) => {
+            if (args.Data is null) return;
             logger.LogInformation("Exec Error: {Data}", args.Data);
         };
 
