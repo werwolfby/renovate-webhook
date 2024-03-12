@@ -4,7 +4,12 @@ using Microsoft.Extensions.Options;
 
 namespace RenovateWebhooks;
 
-public class Runner(IOptions<RunnerOptions> runnerOptions, ILogger<Runner> logger) : BackgroundService
+public interface IRunner : IHostedService
+{
+    void Trigger();
+}
+
+public class Runner(IOptions<RunnerOptions> runnerOptions, ILogger<Runner> logger) : BackgroundService, IRunner
 {
     private static readonly object Event = new();
     private readonly RunnerOptions _runnerOptions = runnerOptions.Value;
