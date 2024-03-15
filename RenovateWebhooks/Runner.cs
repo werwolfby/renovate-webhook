@@ -76,7 +76,7 @@ public class Runner(IOptions<RunnerOptions> runnerOptions, ILogger<Runner> logge
             while (true)
             {
                 await _cronJobChannel.Writer.WriteAsync(Event, cancellationToken);
-                await Task.Delay(TimeSpan.FromHours(1), cancellationToken);
+                await Task.Delay(_runnerOptions.Schedule, cancellationToken);
             }
         }
         catch (OperationCanceledException)
