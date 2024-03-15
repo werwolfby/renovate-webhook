@@ -9,7 +9,7 @@ public interface IRunner : IHostedService
     void Trigger();
 }
 
-public class Runner(IOptions<RunnerOptions> runnerOptions, ILogger<Runner> logger) : BackgroundService, IRunner
+public class Runner(IOptions<RunnerOptions> runnerOptions, IExecutor executor, ILogger<Runner> logger) : BackgroundService, IRunner
 {
     private static readonly object Event = new();
     private readonly RunnerOptions _runnerOptions = runnerOptions.Value;
@@ -29,7 +29,7 @@ public class Runner(IOptions<RunnerOptions> runnerOptions, ILogger<Runner> logge
 
         var cronJobTask = CronJobProducer(stoppingToken);
 
-        await ExecuteJob(() => RunExternalExecutableAsync(stoppingToken));
+        await ExecuteJob(() => executor.Run(stoppingToken));
 
         await cronJobTask;
 
@@ -82,39 +82,5 @@ public class Runner(IOptions<RunnerOptions> runnerOptions, ILogger<Runner> logge
         {
             _executeChannel.Writer.Complete();
         }
-    }
-
-    private async Task RunExternalExecutableAsync(CancellationToken cancellationToken)
-    {
-        var processStartInfo = new ProcessStartInfo
-        {
-            FileName = _runnerOptions.ExecutablePath,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
-        foreach (var arg in _runnerOptions.Arguments)
-        {
-            processStartInfo.ArgumentList.Add(arg);
-        }
-
-        using var process = new Process();
-        process.StartInfo = processStartInfo;
-        process.OutputDataReceived += (_, args) => {
-            if (args.Data is null) return;
-            logger.LogInformation("Exec Output: {Data}", args.Data);
-        };
-        process.ErrorDataReceived += (_, args) => {
-            if (args.Data is null) return;
-            logger.LogInformation("Exec Error: {Data}", args.Data);
-        };
-
-        process.Start();
-
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
-
-        await process.WaitForExitAsync(cancellationToken);
     }
 }
