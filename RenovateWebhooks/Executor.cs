@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Options;
 
 namespace RenovateWebhooks;
@@ -15,6 +16,15 @@ public class Executor(IOptions<ExecutorOptions> executorOptions, ILogger<Executo
 
     [DllImport("libc", SetLastError = true)]
     private static extern int kill(int pid, int sig);
+#else
+    private enum ConsoleCtrlEvent
+    {
+        CtrlC = 0,
+        CtrlBreak = 1
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GenerateConsoleCtrlEvent(ConsoleCtrlEvent sigEvent, int dwProcessGroupId);
 #endif
 
     private readonly ExecutorOptions _executorOptions = executorOptions.Value;
@@ -83,8 +93,11 @@ public class Executor(IOptions<ExecutorOptions> executorOptions, ILogger<Executo
             // Send SIGTERM to request a graceful shutdown
             kill(process.Id, SIGTERM);
 #else
-            // For Windows, CloseMainWindow
-            process.CloseMainWindow();
+            if (!process.CloseMainWindow())
+            {
+                // If the main window is not responding, send a Ctrl+C event
+                GenerateConsoleCtrlEvent(ConsoleCtrlEvent.CtrlBreak, 0);
+            }
 #endif
             if (process.HasExited)
             {
