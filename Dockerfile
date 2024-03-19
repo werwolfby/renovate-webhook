@@ -46,7 +46,7 @@ COPY . .
 RUN dotnet build ./RenovateWebhooks/RenovateWebhooks.csproj -a ${TARGETARCH} -c Release
 RUN dotnet publish ./RenovateWebhooks/RenovateWebhooks.csproj -a ${TARGETARCH} --no-build --no-restore --output /artifacts
 
-FROM renovate/renovate:37.232.0 as final
+FROM renovate/renovate:37.256.1 as final
 COPY --from=build /artifacts /app
 WORKDIR /app
 ENTRYPOINT ["./RenovateWebhooks"]
