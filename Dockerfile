@@ -35,12 +35,11 @@ RUN dotnet tool install --global dotnet-subset --version 0.3.2
 FROM --platform=$BUILDPLATFORM sdk AS prepare-restore
 
 COPY . .
-RUN dotnet subset restore RenovateWebhooks.sln --root-directory=. --output /restore-files
+RUN dotnet subset restore RenovateWebhooks.sln --root-directory=. --output /restore
 
 FROM --platform=$BUILDPLATFORM sdk AS build
 ARG TARGETARCH
-COPY . .
-COPY --from=prepare-restore /restore-files/ ./
+COPY --from=prepare-restore /restore ./
 RUN dotnet restore ./RenovateWebhooks/RenovateWebhooks.csproj -a ${TARGETARCH} --no-cache
 COPY . .
 RUN dotnet build ./RenovateWebhooks/RenovateWebhooks.csproj -a ${TARGETARCH} -c Release
