@@ -1,3 +1,4 @@
+using NuGet.Versioning;
 using Nuke.Common;
 using Nuke.Common.IO;
 using Nuke.Common.Tools.Docker;
@@ -9,6 +10,8 @@ using static Nuke.Common.Tools.Docker.DockerTasks;
 class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning
 {
     public static int Main () => Execute<Build>();
+
+    [DockerArgValue] public SemanticVersion RenovateVersion { get; set; }
 
     Target Clean => _ => _
         .Before<IRestore>()
