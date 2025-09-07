@@ -3,7 +3,7 @@ using Nuke.Common.IO;
 using Nuke.Common.Utilities.Collections;
 using Nuke.Components;
 
-class Build : NukeBuild, IRestore, ICompile
+class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning
 {
     public static int Main () => Execute<Build>();
 
