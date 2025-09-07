@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using NuGet.Versioning;
 using Nuke.Common;
 using Nuke.Common.IO;
@@ -24,6 +28,34 @@ class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning
                 .DeleteDirectories();
         });
 
+    Target LatestRenovateVersion => _ => _
+        .Executes(async () =>
+        {
+            var registry = "renovate";
+            var image = "renovate";
+
+            var latestRenovateVersion = await ListTagsFromDockerHub($"{registry}/{image}")
+                .Select(version =>
+                {
+                    if (version.StartsWith("sha256"))
+                        return null;
+
+                    if (version.StartsWith("v"))
+                        version = version.Substring(1);
+
+                    SemanticVersion.TryParse(version, out var semanticVersion);
+                    return semanticVersion;
+                })
+                .Where(x => x != null && string.IsNullOrEmpty(x.Release))
+                .TakeWhile(v => v > RenovateVersion)
+                .Take(100)
+                .MaxAsync();
+
+            ReportSummary(c => c
+                .AddPair("Latest Renovate Version", latestRenovateVersion?.ToString() ?? "N/A")
+                .AddPair("Current Renovate Version", RenovateVersion.ToString()));
+        });
+
     Target Docker => _ => _
         .DependsOn<ICompile>()
         .Executes(() =>
@@ -45,5 +77,23 @@ class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning
 
             Log.Logger.Information("Built Docker image {DockerTag}", dockerTag);
         });
+
+    static async IAsyncEnumerable<string> ListTagsFromDockerHub(string repo)
+    {
+        var s = repo.Split('/', 2);
+        var ns = s[0];
+        var name = s[1];
+        var url = $"https://hub.docker.com/v2/namespaces/{Uri.EscapeDataString(ns)}/repositories/{Uri.EscapeDataString(name)}/tags?page_size=100&ordering=last_updated";
+        while (!string.IsNullOrEmpty(url))
+        {
+            Log.Logger.Information("Loading Docker tags from {Url}", url);
+            var content = await HttpTasks.HttpDownloadStringAsync(url);
+            var doc = JsonDocument.Parse(content);
+            foreach (var x in doc.RootElement.GetProperty("results").EnumerateArray())
+                yield return x.GetProperty("name").GetString();
+            url = doc.RootElement.TryGetProperty("next", out var next) ? next.GetString() : null;
+            Log.Logger.Information("Next page: {Url}", url);
+        }
+    }
 
 }
