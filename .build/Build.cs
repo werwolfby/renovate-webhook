@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using JetBrains.Annotations;
 using NuGet.Versioning;
 using Nuke.Common;
 using Nuke.Common.IO;
@@ -11,11 +12,13 @@ using Nuke.Components;
 using Serilog;
 using static Nuke.Common.Tools.Docker.DockerTasks;
 
-class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning
+class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning, IHazDockerFile
 {
     public static int Main () => Execute<Build>();
 
     [DockerArgValue] public SemanticVersion RenovateVersion { get; set; }
+
+    [CanBeNull] public SemanticVersion TargetRenovateVersion { get; set; }
 
     Target Clean => _ => _
         .Before<IRestore>()
@@ -28,7 +31,8 @@ class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning
                 .DeleteDirectories();
         });
 
-    Target LatestRenovateVersion => _ => _
+    Target GetLatestRenovateVersion => _ => _
+        .WhenSkipped(DependencyBehavior.Execute)
         .Executes(async () =>
         {
             var registry = "renovate";
@@ -51,9 +55,65 @@ class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning
                 .Take(100)
                 .MaxAsync();
 
+            latestRenovateVersion ??= RenovateVersion;
+
             ReportSummary(c => c
                 .AddPair("Latest Renovate Version", latestRenovateVersion?.ToString() ?? "N/A")
                 .AddPair("Current Renovate Version", RenovateVersion.ToString()));
+
+            TargetRenovateVersion = latestRenovateVersion;
+        });
+
+    Target UpgradeRenovateVersion => _ => _
+        .DependsOn(GetLatestRenovateVersion)
+        .OnlyWhenDynamic(() => TargetRenovateVersion != null)
+        .Executes(() =>
+        {
+            if (TargetRenovateVersion == RenovateVersion)
+            {
+                Log.Logger.Information("Already at latest Renovate version {RenovateVersion}", RenovateVersion);
+                ReportSummary(c => c
+                    .AddPair("Renovate Version", RenovateVersion.ToString()));
+                return;
+            }
+
+            Log.Logger.Information("Upgrading Renovate version from {OldVersion} to {NewVersion}", RenovateVersion, TargetRenovateVersion);
+
+            var dockerFile = ((IHazDockerFile)this).DockerFile;
+            var argName = this.GetType().GetMember(nameof(RenovateVersion))
+                .Single()
+                .GetCustomAttributes(typeof(DockerArgValueAttribute), false)
+                .OfType<DockerArgValueAttribute>()
+                .First()
+                .GetArgName(nameof(RenovateVersion));
+
+            bool updated = false;
+
+            dockerFile.UpdateText(text =>
+            {
+                // Use \n intentionally instead of Environment.NewLine
+                // to keep existing line endings, and change only the line we want to change
+                var lines = text.Split("\n");
+                var updatedLines = lines
+                    .Select(l =>
+                    {
+                        if (!l.StartsWith("ARG ") || !l.Contains(argName) || !l.Contains(RenovateVersion.ToString()))
+                            return l;
+
+                        updated = true;
+                        return $"ARG {argName}={TargetRenovateVersion}";
+                    });
+
+                return string.Join("\n", updatedLines);
+            });
+
+            if (!updated)
+                throw new Exception($"Failed to update {argName} in {dockerFile} to {TargetRenovateVersion}");
+
+            Log.Logger.Information("Updated version in version.json");
+
+            ReportSummary(c => c
+                .AddPair("New Renovate Version", TargetRenovateVersion!.ToString()));
         });
 
     Target Docker => _ => _

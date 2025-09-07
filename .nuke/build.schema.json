@@ -27,8 +27,9 @@
         "Clean",
         "Compile",
         "Docker",
-        "LatestRenovateVersion",
-        "Restore"
+        "GetLatestRenovateVersion",
+        "Restore",
+        "UpgradeRenovateVersion"
       ]
     },
     "Verbosity": {
