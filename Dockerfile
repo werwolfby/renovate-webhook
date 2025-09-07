@@ -1,4 +1,5 @@
 ARG DOTNET_VERSION=8.0
+ARG RENOVATE_VERSION=37.256.1
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS sdk
 ENV DOTNET_NOLOGO=1 \
     DOTNET_CLI_TELEMETRY_OPTOUT=1 \
@@ -28,7 +29,7 @@ COPY . .
 RUN dotnet build ./RenovateWebhooks/RenovateWebhooks.csproj -a ${TARGETARCH} -c Release
 RUN dotnet publish ./RenovateWebhooks/RenovateWebhooks.csproj -a ${TARGETARCH} --no-build --no-restore --output /artifacts
 
-FROM renovate/renovate:37.256.1 AS final
+FROM renovate/renovate:$RENOVATE_VERSION AS final
 COPY --from=build /artifacts /app
 WORKDIR /app
 ENTRYPOINT ["./RenovateWebhooks"]
