@@ -12,13 +12,17 @@ public class DockerArgValueAttribute : ValueInjectionAttributeBase
 
     public ArgNameCase Case { get; set; } = ArgNameCase.UpperSnakeCase;
 
-    public RelativePath DockerFile { get; set; } = (RelativePath)"Dockerfile";
+    [CanBeNull] public RelativePath DockerFile { get; set; }
 
     public override object GetValue(MemberInfo member, object instance)
     {
-        var argName = ArgName ?? GetArgNameFromMemberName(member.Name);
+        var argName = ArgName ?? GetArgName(member.Name);
 
-        var dockerFile = Build.RootDirectory / DockerFile;
+        var dockerFile = DockerFile is not null
+            ? Build.RootDirectory / DockerFile
+            : instance is IHazDockerFile hazDockerFile
+                ? hazDockerFile.DockerFile
+                : Build.RootDirectory / "Dockerfile";
         var resultValue = dockerFile.ReadAllLines()
             .Select(x => x.Trim())
             .Where(x => x.StartsWith("ARG "))
@@ -33,9 +37,10 @@ public class DockerArgValueAttribute : ValueInjectionAttributeBase
         return ReflectionUtility.Convert(resultValue, member.GetMemberType());
     }
 
-    string GetArgNameFromMemberName(string memberName)
-    {
-        return Case switch
+    public string GetArgName(string memberName) => GetArgName(memberName, Case);
+
+    public static string GetArgName(string memberName, ArgNameCase argNameCase) =>
+        argNameCase switch
         {
             ArgNameCase.PascalCase => char.ToUpperInvariant(memberName[0]) + memberName[1..],
             ArgNameCase.CamelCase => char.ToLowerInvariant(memberName[0]) + memberName[1..],
@@ -44,7 +49,6 @@ public class DockerArgValueAttribute : ValueInjectionAttributeBase
             ArgNameCase.LowerSnakeCase => string.Concat(memberName.Select((x, i) => i > 0 && char.IsUpper(x) ? "_" + char.ToLowerInvariant(x) : char.ToLowerInvariant(x).ToString())).ToLowerInvariant(),
             _ => throw new ArgumentOutOfRangeException()
         };
-    }
 }
 
 public enum ArgNameCase
