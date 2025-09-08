@@ -139,7 +139,8 @@ class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning, IHazDock
         {
             var version = ((IHazNerdbankGitVersioning)this).Versioning.SimpleVersion;
             var imageName = "werwolfby/renovate-webhook";
-            var dockerTag = $"{imageName}:{version}-{RenovateVersion}";
+            var tag = $"{version}-{RenovateVersion}";
+            var dockerTag = $"{imageName}:{tag}";
             var latestTag = $"{imageName}:latest";
 
             DockerBuildxBuild(s => s
@@ -159,13 +160,14 @@ class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning, IHazDock
             {
                 Log.Logger.Information("Pushed Docker image {DockerTag}", dockerTag);
 
-                GitTasks.Git($"tag {version}");
+                GitTasks.Git($"tag {tag}");
                 GitTasks.Git("push origin HEAD --tags");
 
-                Log.Logger.Information("Pushed Git tag {Version}", version);
+                Log.Logger.Information("Pushed Git tag {Tag}", tag);
 
                 ReportSummary(c => c
-                    .AddPair("Git Tag", version));
+                    .AddPair("Docker Image", dockerTag)
+                    .AddPair("Git Tag", tag));
             }
         });
 
