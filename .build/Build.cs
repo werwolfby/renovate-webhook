@@ -154,6 +154,19 @@ class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning, IHazDock
                 .AddPair("Docker Image", dockerTag));
 
             Log.Logger.Information("Built Docker image {DockerTag}", dockerTag);
+
+            if (Push)
+            {
+                Log.Logger.Information("Pushed Docker image {DockerTag}", dockerTag);
+
+                GitTasks.Git($"tag {version}");
+                GitTasks.Git("push origin HEAD --tags");
+
+                Log.Logger.Information("Pushed Git tag {Version}", version);
+
+                ReportSummary(c => c
+                    .AddPair("Git Tag", version));
+            }
         });
 
     static async IAsyncEnumerable<string> ListTagsFromDockerHub(string repo)
