@@ -114,6 +114,9 @@
           "type": "boolean",
           "description": "Ignore unreachable sources during Restore"
         },
+        "Platforms": {
+          "type": "string"
+        },
         "Push": {
           "type": "boolean"
         },

@@ -23,6 +23,8 @@ class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning, IHazDock
 
     [Parameter] public bool Push { get; set; }
 
+    [Parameter] public string Platforms { get; set; } = "linux/amd64,linux/arm64";
+
     Target Clean => _ => _
         .Before<IRestore>()
         .Executes(() =>
@@ -137,7 +139,7 @@ class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning, IHazDock
         {
             var version = ((IHazNerdbankGitVersioning)this).Versioning.SimpleVersion;
             var imageName = "werwolfby/renovate-webhook";
-            var dockerTag = $"{imageName}:{version}";
+            var dockerTag = $"{imageName}:{version}-{RenovateVersion}";
             var latestTag = $"{imageName}:latest";
 
             DockerBuildxBuild(s => s
@@ -145,7 +147,8 @@ class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning, IHazDock
                 .SetFile(RootDirectory / "Dockerfile")
                 .SetTag(dockerTag, latestTag)
                 .SetPull(true)
-                .SetPlatform("linux/amd64,linux/arm64"));
+                .SetPlatform(Platforms)
+                .SetPush(Push));
 
             ReportSummary(c => c
                 .AddPair("Docker Image", dockerTag));
