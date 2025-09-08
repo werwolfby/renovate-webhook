@@ -2,6 +2,12 @@ using RenovateWebhooks;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
+builder.Logging
+    .AddSimpleConsole(c =>
+    {
+        c.SingleLine = true;
+    });
+
 builder.Services.AddOptions<RunnerOptions>()
     .BindConfiguration("Runner");
 builder.Services.AddOptions<ExecutorOptions>()

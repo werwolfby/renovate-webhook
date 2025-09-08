@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "nbgv": {
+      "version": "3.7.115",
+      "commands": [
+        "nbgv"
+      ],
+      "rollForward": false
+    },
+    "nuke.globaltool": {
+      "version": "9.0.4",
+      "commands": [
+        "nuke"
+      ],
+      "rollForward": false
+    }
+  }
+}
