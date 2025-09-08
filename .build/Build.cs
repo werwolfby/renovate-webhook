@@ -7,6 +7,7 @@ using NuGet.Versioning;
 using Nuke.Common;
 using Nuke.Common.IO;
 using Nuke.Common.Tools.Docker;
+using Nuke.Common.Tools.Git;
 using Nuke.Common.Utilities.Collections;
 using Nuke.Components;
 using Serilog;
@@ -19,6 +20,8 @@ class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning, IHazDock
     [DockerArgValue] public SemanticVersion RenovateVersion { get; set; }
 
     [CanBeNull] public SemanticVersion TargetRenovateVersion { get; set; }
+
+    [Parameter] public bool Push { get; set; }
 
     Target Clean => _ => _
         .Before<IRestore>()
@@ -114,6 +117,18 @@ class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning, IHazDock
 
             ReportSummary(c => c
                 .AddPair("New Renovate Version", TargetRenovateVersion!.ToString()));
+
+            var message = $"build(renovate): upgrade renovate image to {TargetRenovateVersion}";
+            var author = "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>";
+
+            Log.Logger.Information("Committing change {Message}", message);
+            GitTasks.Git($"commit {dockerFile} -m {message} --author={author}");
+
+            if (Push)
+            {
+                Log.Logger.Information("Pushing change {Message}", message);
+                GitTasks.Git("push origin HEAD");
+            }
         });
 
     Target Docker => _ => _
