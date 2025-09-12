@@ -2,6 +2,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
 using Docker.DotNet;
+using HealthChecks.UI.Client;
+using HealthChecks.UI.Core;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using RenovateWebhooks;
 
 var builder = WebApplication.CreateSlimBuilder(args);
@@ -38,7 +42,29 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-app.MapHealthChecks("/healthz");
+var healthzJsonOptions = typeof(UIResponseWriter).GetMethod("CreateJsonOptions", BindingFlags.NonPublic | BindingFlags.Static)
+    ?.Invoke(null, []) as JsonSerializerOptions
+    ?? throw new InvalidOperationException("Failed to get HealthChecks.UI.Client.UIResponseWriter.CreateJsonOptions");
+
+healthzJsonOptions.TypeInfoResolver = JsonSerializationContext.Default;
+
+var healthzJsonTypeInfo = healthzJsonOptions.TypeInfoResolver.GetTypeInfo(typeof(UIHealthReport), healthzJsonOptions)
+    ?? throw new InvalidOperationException("Failed to get JsonTypeInfo for UIHealthReport");
+
+app.MapHealthChecks("/healthz", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        var uiReport = UIHealthReport.CreateFrom(report);
+
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = report.Status == HealthStatus.Healthy
+            ? StatusCodes.Status200OK
+            : StatusCodes.Status503ServiceUnavailable;
+
+        await JsonSerializer.SerializeAsync(context.Response.Body, uiReport, healthzJsonTypeInfo).ConfigureAwait(false);
+    }
+});
 
 app.MapGet("/", () => "Hello, World!");
 app.MapPost("/trigger", (IRunner runner) =>
