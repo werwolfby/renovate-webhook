@@ -66,7 +66,6 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
     }
 });
 
-app.MapGet("/", () => "Hello, World!");
 app.MapPost("/trigger", (IRunner runner) =>
 {
     runner.Trigger();
