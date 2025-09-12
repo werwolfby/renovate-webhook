@@ -18,8 +18,11 @@ builder.Services
     .AddSingleton<IRunner, Runner>()
     ;
 builder.Services.AddHostedService<IRunner>(p => p.GetRequiredService<IRunner>());
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+
+app.MapHealthChecks("/healthz");
 
 app.MapGet("/", () => "Hello, World!");
 app.MapPost("/trigger", (IRunner runner) =>
