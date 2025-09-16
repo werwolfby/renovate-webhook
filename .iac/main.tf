@@ -5,4 +5,14 @@
     key    = "states/renovate-webhook"
     region = "us-west-2"
   }
+  required_providers {
+    github = {
+      source  = "integrations/github"
+      version = "~> 6.0"
+    }
+    docker = {
+      source  = "docker/docker"
+      version = "~> 0.5"
+    }
+  }
 }
