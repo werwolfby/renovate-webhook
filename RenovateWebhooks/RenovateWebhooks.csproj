@@ -14,4 +14,10 @@
         <DefineConstants>$(DefineConstants);UNIX</DefineConstants>
     </PropertyGroup>
 
+    <ItemGroup>
+      <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
+      <PackageReference Include="Docker.DotNet.Enhanced" Version="3.128.5" />
+      <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.9" />
+    </ItemGroup>
+
 </Project>
