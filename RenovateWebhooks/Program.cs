@@ -57,6 +57,9 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
     {
         var uiReport = UIHealthReport.CreateFrom(report);
 
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation("Health check status: {Status}", uiReport.Status);
+
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = report.Status == HealthStatus.Healthy
             ? StatusCodes.Status200OK
