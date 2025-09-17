@@ -5,6 +5,7 @@ using System.Text.Json;
 using JetBrains.Annotations;
 using NuGet.Versioning;
 using Nuke.Common;
+using Nuke.Common.CI.GitHubActions;
 using Nuke.Common.IO;
 using Nuke.Common.Tools.Docker;
 using Nuke.Common.Tools.Git;
@@ -149,7 +150,13 @@ class Build : NukeBuild, IRestore, ICompile, IHazNerdbankGitVersioning, IHazDock
                 .SetTag(dockerTag, latestTag)
                 .SetPull(true)
                 .SetPlatform(Platforms)
-                .SetPush(Push));
+                .SetPush(Push)
+                .SetCacheTo(GitHubActions.Instance != null
+                    ? ["type=gha,mode=max"]
+                    : [])
+                .SetCacheFrom(GitHubActions.Instance != null
+                    ? ["type=gha"]
+                    : []));
 
             ReportSummary(c => c
                 .AddPair("Docker Image", dockerTag));
