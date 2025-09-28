@@ -77,8 +77,10 @@ app.MapPost("/trigger", (IRunner runner) =>
 
 app.Run();
 
-[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Docker.DotNet.JsonSerializer is preserved by configuration")]
-[UnconditionalSuppressMessage("Trimming", "IL2075:'this' argument does not satisfy 'DynamicallyAccessedMemberTypes.PublicProperties' in call to 'System.Type.GetProperty(String, BindingFlags)'", Justification = "Docker.DotNet.JsonSerializer properties are preserved by configuration")]
+[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Docker.DotNet.JsonSerializer is preserved by DynamicDependency")]
+[UnconditionalSuppressMessage("Trimming", "IL2075:'this' argument does not satisfy 'DynamicallyAccessedMemberTypes.PublicProperties' in call to 'System.Type.GetProperty(String, BindingFlags)'", Justification = "Docker.DotNet.JsonSerializer properties are preserved by DynamicDependency")]
+[UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling", Justification = "Docker.DotNet.JsonSerializer is preserved")]
+[DynamicDependency(DynamicallyAccessedMemberTypes.All, "Docker.DotNet.JsonSerializer", "Docker.DotNet")]
 static void ConfigureDockerJsonSerializer()
 {
     var dockerDotNetJsonSerializerType = typeof(DockerClient).Assembly.GetType("Docker.DotNet.JsonSerializer", true)!;
