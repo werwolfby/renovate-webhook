@@ -1,7 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
-using Docker.DotNet;
 using HealthChecks.UI.Client;
 using HealthChecks.UI.Core;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -15,8 +13,6 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.TypeInfoResolver = JsonSerializationContext.Default;
 });
-
-ConfigureDockerJsonSerializer();
 
 builder.Logging
     .AddSimpleConsole(c =>
@@ -34,8 +30,6 @@ builder.Services
     .AddSingleton<IRunner, Runner>()
     ;
 builder.Services.AddHostedService<IRunner>(p => p.GetRequiredService<IRunner>());
-
-builder.Services.AddTransient<IDockerClient, DockerClient>(p => new DockerClientConfiguration().CreateClient());
 
 builder.Services.AddHealthChecks()
     .AddCheck<DockerHealthCheck>("docker");
@@ -76,19 +70,3 @@ app.MapPost("/trigger", (IRunner runner) =>
 });
 
 app.Run();
-
-[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Docker.DotNet.JsonSerializer is preserved by DynamicDependency")]
-[UnconditionalSuppressMessage("Trimming", "IL2075:'this' argument does not satisfy 'DynamicallyAccessedMemberTypes.PublicProperties' in call to 'System.Type.GetProperty(String, BindingFlags)'", Justification = "Docker.DotNet.JsonSerializer properties are preserved by DynamicDependency")]
-[UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling", Justification = "Docker.DotNet.JsonSerializer is preserved")]
-[DynamicDependency(DynamicallyAccessedMemberTypes.All, "Docker.DotNet.JsonSerializer", "Docker.DotNet")]
-static void ConfigureDockerJsonSerializer()
-{
-    var dockerDotNetJsonSerializerType = typeof(DockerClient).Assembly.GetType("Docker.DotNet.JsonSerializer", true)!;
-    var instanceProperty = dockerDotNetJsonSerializerType.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static)
-        ?? throw new InvalidOperationException("Docker.DotNet.JsonSerializer.Instance property not found");
-    var optionsField = dockerDotNetJsonSerializerType.GetField("_options", BindingFlags.NonPublic | BindingFlags.Instance)
-        ?? throw new InvalidOperationException("Docker.DotNet.JsonSerializer._options field not found");
-    var dockerDotNetJsonSerializer = instanceProperty.GetValue(null);
-    JsonSerializerOptions options = (JsonSerializerOptions)optionsField.GetValue(dockerDotNetJsonSerializer)!;
-    options.TypeInfoResolver = JsonSerializationContext.Default;
-}
